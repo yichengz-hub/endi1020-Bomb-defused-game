@@ -17,16 +17,17 @@ class SimonSays():
 
 
     def start(self):
-        self.r_frequency = 252
-        self.b_frequency = 415
-        self.y_frequency = 310
-        self.g_frequency = 209
-        self.colour_time = 0.5
-        self.colour_sequence = []
+        self.r_frequency = 247*2
+        self.y_frequency = 311*2
+        self.b_frequency = 415*2
+        self.g_frequency = 100*2
+        self.colour_time = 0.8
+        self.colour_sequence = ['red', 'blue', 'yellow', 'green']
         self.colours = ['red', 'blue', 'yellow', 'green']
 
 
     async def increase_round(self):
+        await asyncio.sleep(0.01)
         self.colour_sequence.append(choice(self.colours))
 
 
@@ -59,72 +60,77 @@ class SimonSays():
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.g_led, False)
                     buzzer_stop(self.buzzer_pin)
+            await asyncio.sleep(1.5)
 
-            start_time = time()
-            inputted_sequence = []
-            input_count = 0
-            while True:
-                await asyncio.sleep(0.001)
-                r_input = digital_read(self.r_button)
-                b_input = digital_read(self.b_button)
-                y_input = digital_read(self.y_button)
-                g_input = digital_read(self.g_button)
+    #         start_time = time()
+    #         inputted_sequence = []
+    #         input_count = 0
+    #         while True:
+    #             await asyncio.sleep(0.001)
+    #             r_input = digital_read(self.r_button)
+    #             b_input = digital_read(self.b_button)
+    #             y_input = digital_read(self.y_button)
+    #             g_input = digital_read(self.g_button)
 
-                test_list = self.colour_sequence[:input_count]
-                if not test_list == inputted_sequence:
-                    # you get a strike if the above condition is true
-                    win_round = False
-                    return win_round
+    #             test_list = self.colour_sequence[:input_count]
+    #             if not test_list == inputted_sequence:
+    #                 # you get a strike if the above condition is true
+    #                 strike = True
+    #                 return strike
                 
-                elif inputted_sequence == self.colour_sequence:
-                    # you win the round, this is the only way to win
-                    win_round = True
-                    return win_round
+    #             elif inputted_sequence == self.colour_sequence:
+    #                 # you win the round, this is the only way to win
+    #                 strike = False
+    #                 return strike
 
-                if r_input == True:
-                    inputted_sequence.append('red')
-                    input_count += 1
-                    start_time = time()
-                    digital_write(self.r_led, True)
-                    buzzer_frequency(self.buzzer_pin, self.r_frequency)
-                    await asyncio.sleep(self.colour_time)
-                    digital_write(self.r_led, False)
-                    buzzer_stop(self.buzzer_pin)
-                elif b_input == True:
-                    inputted_sequence.append('blue')
-                    input_count += 1
-                    start_time = time()
-                    digital_write(self.b_led, True)
-                    buzzer_frequency(self.buzzer_pin, self.b_frequency)
-                    await asyncio.sleep(self.colour_time)
-                    digital_write(self.b_led, False)
-                    buzzer_stop(self.buzzer_pin)
-                elif y_input == True:
-                    inputted_sequence.append('yellow')
-                    input_count += 1
-                    start_time = time()
-                    digital_write(self.r_led, True)
-                    digital_write(self.g_led, True)
-                    buzzer_frequency(self.buzzer_pin, self.y_frequency)
-                    await asyncio.sleep(self.colour_time)
-                    digital_write(self.r_led, False)
-                    digital_write(self.g_led, False)
-                    buzzer_stop(self.buzzer_pin)
-                elif g_input == True:
-                    inputted_sequence.append('green')
-                    input_count += 1
-                    start_time = time()
-                    digital_write(self.g_led, True)
-                    buzzer_frequency(self.buzzer_pin, self.g_frequency)
-                    await asyncio.sleep(self.colour_time)
-                    digital_write(self.g_led, False)
-                    buzzer_stop(self.buzzer_pin)
+    #             if r_input == True:
+    #                 inputted_sequence.append('red')
+    #                 input_count += 1
+    #                 start_time = time()
+    #                 digital_write(self.r_led, True)
+    #                 buzzer_frequency(self.buzzer_pin, self.r_frequency)
+    #                 await asyncio.sleep(self.colour_time)
+    #                 digital_write(self.r_led, False)
+    #                 buzzer_stop(self.buzzer_pin)
+    #             elif b_input == True:
+    #                 inputted_sequence.append('blue')
+    #                 input_count += 1
+    #                 start_time = time()
+    #                 digital_write(self.b_led, True)
+    #                 buzzer_frequency(self.buzzer_pin, self.b_frequency)
+    #                 await asyncio.sleep(self.colour_time)
+    #                 digital_write(self.b_led, False)
+    #                 buzzer_stop(self.buzzer_pin)
+    #             elif y_input == True:
+    #                 inputted_sequence.append('yellow')
+    #                 input_count += 1
+    #                 start_time = time()
+    #                 digital_write(self.r_led, True)
+    #                 digital_write(self.g_led, True)
+    #                 buzzer_frequency(self.buzzer_pin, self.y_frequency)
+    #                 await asyncio.sleep(self.colour_time)
+    #                 digital_write(self.r_led, False)
+    #                 digital_write(self.g_led, False)
+    #                 buzzer_stop(self.buzzer_pin)
+    #             elif g_input == True:
+    #                 inputted_sequence.append('green')
+    #                 input_count += 1
+    #                 start_time = time()
+    #                 digital_write(self.g_led, True)
+    #                 buzzer_frequency(self.buzzer_pin, self.g_frequency)
+    #                 await asyncio.sleep(self.colour_time)
+    #                 digital_write(self.g_led, False)
+    #                 buzzer_stop(self.buzzer_pin)
 
-                if time() - start_time > 2:
-                    if input_count == 0:
-                        # No strikes, break the loop and start playing the output pattern again
-                        break
-                    else:
-                        # Break out of the function, you failled the round
-                        win_round = False
-                        return win_round          
+    #             if time() - start_time > 2:
+    #                 if input_count == 0:
+    #                     # No strikes, break the loop and start playing the output pattern again
+    #                     break
+    #                 else:
+    #                     strike = True
+    #                     return strike
+                    
+
+    # async def game_loop_main(self):
+    #     first_round = self.play() 
+    #     pass               
