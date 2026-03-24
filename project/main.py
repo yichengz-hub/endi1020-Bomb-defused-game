@@ -1,22 +1,22 @@
-from morse_code import *
-from timer_module import *
-from simon_says import *
+import morse_code
+import timer_module
+import simon_says
 import asyncio
 
 win = 0
 
-timer = Timer((1,1,1))
-morse_code = Morsecode(8, 9, 7)
-morse_code.start()
-simon_says = SimonSays()
+morse_code_game = morse_code.Morsecode(3, 4, 6)
+timer = timer_module.Timer()
+simon_says_game = simon_says.SimonSays(5, 5, 3, 9, 10, 11, 12, 13, 4)
+
 
 async def loop():
-    global morse_code, win, strikes, timer
+    global morse_code_game, win, strikes, timer
 
     while timer.current_strikes <= 3:
 
         timer_task = asyncio.create_task(timer.strikes())
-        morse_task = asyncio.create_task(morse_code.main())
+        morse_task = asyncio.create_task(morse_code_game.main())
         morsecode_result = await morse_task
 
         if morsecode_result == "code lose":

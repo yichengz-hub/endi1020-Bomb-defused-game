@@ -1,13 +1,36 @@
 from simon_says import *
-import asyncio
-from engi1020.arduino.api import *
 
 async def test():
-    simon_test = SimonSays(5, 5, 3, 9, 10, 11, 12, 13, 4)
-    simon_test.start()
-
-    await simon_test.increase_round()
     oled_clear()
-    await simon_test.play()
+    round = 0
+    strikes = 0
+    colour_sequence = []
+    first_time = True
+    simon_test = SimonSays(5, 5, 3, 9, 10, 11, 12, 13, 4)
+
+    while strikes < 3: 
+        simon_test.start(initial_round=round, initial_strikes=strikes, initial_colours=colour_sequence)
+        if first_time:
+            await simon_test.increase_round() 
+            first_time = False    
+        simon_task = asyncio.create_task(simon_test.play())
+
+        while True:
+            if simon_task.done():
+                results = await simon_task
+
+                if results == 'WIN':
+                    print(results)
+                    return results
+                
+                elif results == 'Lose':
+                    print(results)
+                    return results
+                
+                round = results[0]
+                strikes = results[1]
+                colour_sequence = results[2]
+                break
+            await asyncio.sleep(0.1)
 
 asyncio.run(test())

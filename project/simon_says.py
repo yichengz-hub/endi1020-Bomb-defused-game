@@ -4,8 +4,8 @@ from random import choice
 from time import time
 
 class SimonSays():
-    def __init__(self, round_number,  buzzer_pin, r_button, y_button, b_button, g_button, r_led, g_led, b_led ):
-        self.round_number = round_number
+    def __init__(self, total_rounds,  buzzer_pin, r_button, y_button, b_button, g_button, r_led, g_led, b_led ):
+        self.total_rounds = total_rounds
         self.buzzer_pin = buzzer_pin
         self.r_button = r_button
         self.y_button = y_button
@@ -16,33 +16,34 @@ class SimonSays():
         self.b_led = b_led
 
 
-    def start(self):
-        self.r_frequency = 247*2
-        self.y_frequency = 311*2
-        self.b_frequency = 415*2
-        self.g_frequency = 500*2
+    def start(self, initial_round=0, initial_strikes=0, initial_colours=[]):
+        self.r_frequency = 500
+        self.y_frequency = 622
+        self.b_frequency = 830
+        self.g_frequency = 1000
         self.colour_time = 0.8
         self.next_round = False
-        self.current_round = 0
-        self.strikes = 0
+        self.current_round = initial_round
+        self.strikes = initial_strikes
         self.game_loose_time = 1.5
         self.strike_time = 0.2
         self.strike_frequency = 100
-        self.colour_sequence = []
+        self.colour_sequence = initial_colours
         self.colours = ['red', 'blue', 'yellow', 'green']
 
 
     async def increase_round(self):
         self.colour_sequence.append(choice(self.colours))
+        self.current_round += 1
         await asyncio.sleep(0.05)
 
 
     async def play(self):
         while True:
             # If all rounds are complete, the user wins the game, and the loop ends.
-            if self.current_round >= self.round_number:
+            if self.current_round > self.total_rounds:
                 print("You win the game!")
-                return
+                return 'WIN'
             
             elif self.strikes >= 3:
                 print("You lose the game!")
@@ -51,11 +52,12 @@ class SimonSays():
                 await asyncio.sleep(self.game_loose_time)
                 digital_write(self.r_led, False)
                 buzzer_stop(self.buzzer_pin)
-                return
+                return 'LOSE'
 
             # Check if the round needs to be increased, if it does, add a random colour to the sequence.
             if self.next_round == True:
                 self.colour_sequence.append(choice(self.colours))
+                self.current_round += 1
                 self.next_round = False
             
             for colour in self.colour_sequence:
@@ -177,12 +179,11 @@ class SimonSays():
                         digital_write(self.r_led, False)
                         buzzer_stop(self.buzzer_pin)
                         await asyncio.sleep(self.colour_time + 0.5)
-                        break
+                        return self.current_round, self.strikes, self.colour_sequence
                     
                     # If the inputted sequence is exactly the same as the colour sequence,
                     # then the user wins the round and we increase the round number by 1.  
                     elif inputted_sequence == self.colour_sequence:
-                        self.current_round += 1
                         self.next_round = True
                         print("Round complete!")
                         break
@@ -251,6 +252,6 @@ class SimonSays():
                         digital_write(self.r_led, False)
                         buzzer_stop(self.buzzer_pin)
                         await asyncio.sleep(self.colour_time + 0.5)
-                        break
+                        return self.current_round, self.strikes, self.colour_sequence
                     
                     await asyncio.sleep(0.1)
