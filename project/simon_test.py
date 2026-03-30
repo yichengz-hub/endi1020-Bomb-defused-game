@@ -5,9 +5,9 @@ async def test():
     oled_clear()
     round = 0
     strikes = 0
-    colour_sequence = []
-    first_time = True
-    simon_test = SimonSays(5, 5, 3, 9, 10, 11, 12, 13, 4)
+    colour_sequence = ['yellow']
+    first_time = False
+    simon_test = SimonSays(5,13,2,3,4,6,7,8,9)
 
     while strikes < 3: 
         simon_test.start(initial_round=round, initial_strikes=strikes, initial_colours=colour_sequence)
