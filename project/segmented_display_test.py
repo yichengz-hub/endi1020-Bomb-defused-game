@@ -37,3 +37,4 @@ while True:
     val = analog_read(1)
     print(val)
     time.sleep(0.2)
+    
