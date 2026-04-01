@@ -17,7 +17,7 @@ class SimonSays():
 
 
     def start(self, initial_round=0, initial_strikes=0, initial_colours=[], max_strikes=3):
-        self.r_frequency = 500
+        self.r_frequency = 550
         self.y_frequency = 622
         self.b_frequency = 830
         self.g_frequency = 1000
@@ -38,12 +38,34 @@ class SimonSays():
             2: {'red': 'green', 'blue': 'red', 'green': 'yellow', 'yellow': 'blue' },
         }
 
-        self.matching_colours = [colour for colour in self.mapping[self.strikes].values()]
+        self.matching_colours = [self.mapping[self.strikes][colour] for colour in self.colours]
         self.input_colour_sequence = [self.mapping[self.strikes][color] for color in self.colour_sequence]
 
         print(self.matching_colours)
 
-        
+
+    async def wait_for_release(self):
+        while (
+        digital_read(self.r_button) or
+        digital_read(self.b_button) or
+        digital_read(self.y_button) or
+        digital_read(self.g_button) ):
+            await asyncio.sleep(0.05)
+
+
+    async def win_sound(self):
+        notes = [523, 659, 784, 1047]
+        for note in notes:
+            buzzer_note(self.buzzer_pin, note, 0.15)
+            await asyncio.sleep(0.15)
+
+
+    async def lose_sound(self):
+        notes = [784, 659, 523, 392]
+        for note in notes:
+            buzzer_note(self.buzzer_pin, note, 0.15)
+            await asyncio.sleep(0.25)
+
 
 
     async def increase_round(self):
@@ -59,14 +81,13 @@ class SimonSays():
             # If all rounds are complete, the user wins the game, and the loop ends.
             if self.current_round > self.total_rounds:
                 print("You win the game!")
+                await self.win_sound()
                 return 'WIN'
             
             elif self.strikes >= self.max_strikes:
                 print("You lose the game!")
-                digital_write(self.r_led, True)
-                buzzer_note(self.buzzer_pin, self.strike_frequency, self.game_loose_time)
-                await asyncio.sleep(self.game_loose_time)
-                digital_write(self.r_led, False)
+                await self.lose_sound()
+                await asyncio.sleep(0.2)
                 return 'LOSE'
 
             # Check if the round needs to be increased, if it does, add a random colour to the sequence.
@@ -125,6 +146,7 @@ class SimonSays():
                     buzzer_note(self.buzzer_pin, self.r_frequency, self.colour_time)
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.r_led, False)
+                    await self.wait_for_release()
                     break
                 elif b_input == True:
                     first_input = 'blue'
@@ -132,7 +154,8 @@ class SimonSays():
                     digital_write(self.b_led, True)
                     buzzer_note(self.buzzer_pin, self.b_frequency, self.colour_time)
                     await asyncio.sleep(self.colour_time)
-                    digital_write(self.b_led, False) 
+                    digital_write(self.b_led, False)
+                    await self.wait_for_release() 
                     break
                 elif y_input == True:
                     first_input = 'yellow'
@@ -143,6 +166,7 @@ class SimonSays():
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.r_led, False)
                     digital_write(self.g_led, False)
+                    await self.wait_for_release()
                     break
                 elif g_input == True:   
                     first_input = 'green'
@@ -151,6 +175,7 @@ class SimonSays():
                     buzzer_note(self.buzzer_pin, self.g_frequency,  self.colour_time)
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.g_led, False)
+                    await self.wait_for_release()
                     break
                 
                 # If nothing is inputted for 2 seconds, the colours begin to play again.
@@ -176,16 +201,8 @@ class SimonSays():
                     if not inputted_sequence[input_count] == self.input_colour_sequence[input_count]:
                         self.strikes += 1
                         print(f"You got a strike, total number is: {self.strikes}")
-                        digital_write(self.r_led, True)
-                        buzzer_note(self.buzzer_pin, self.strike_frequency, self.strike_time)
-                        await asyncio.sleep(self.strike_time)
-                        digital_write(self.r_led, False)
-                        await asyncio.sleep(0.1)
-                        buzzer_note(self.buzzer_pin, self.strike_frequency, self.strike_time)
-                        digital_write(self.r_led, True)
-                        await asyncio.sleep(self.strike_time)
-                        digital_write(self.r_led, False)
-                        await asyncio.sleep(self.colour_time + 0.5)
+                        await self.lose_sound()
+                        await asyncio.sleep(0.2)
                         return self.current_round, self.strikes, self.colour_sequence
                     
                     # If the inputted sequence is exactly the same as the colour sequence,
@@ -209,6 +226,7 @@ class SimonSays():
                         buzzer_note(self.buzzer_pin, self.r_frequency, self.colour_time)
                         await asyncio.sleep(self.colour_time)
                         digital_write(self.r_led, False)
+                        await self.wait_for_release()
                     elif b_input == True:
                         inputted_sequence.append('blue')
                         print("blue inputted")
@@ -218,6 +236,7 @@ class SimonSays():
                         buzzer_note(self.buzzer_pin, self.b_frequency, self.colour_time)
                         await asyncio.sleep(self.colour_time)
                         digital_write(self.b_led, False)
+                        await self.wait_for_release()
                     elif y_input == True:
                         inputted_sequence.append('yellow')
                         print("yellow inputted")
@@ -229,6 +248,7 @@ class SimonSays():
                         await asyncio.sleep(self.colour_time)
                         digital_write(self.r_led, False)
                         digital_write(self.g_led, False)
+                        await self.wait_for_release()
                     elif g_input == True:
                         inputted_sequence.append('green')
                         print("green inputted")
@@ -238,21 +258,51 @@ class SimonSays():
                         buzzer_note(self.buzzer_pin, self.g_frequency, self.colour_time)
                         await asyncio.sleep(self.colour_time)
                         digital_write(self.g_led, False)
+                        await self.wait_for_release()
 
                     if time() - start_time > 2:
                         # you get a strike if the above condition is true
                         self.strikes += 1
                         print(f"You got a strike, total number is: {self.strikes}")
-                        digital_write(self.r_led, True)
-                        buzzer_note(self.buzzer_pin, self.strike_frequency, self.strike_time)
-                        await asyncio.sleep(self.strike_time)
-                        digital_write(self.r_led, False)
-                        await asyncio.sleep(0.1)
-                        buzzer_note(self.buzzer_pin, self.strike_frequency, self.strike_time)
-                        digital_write(self.r_led, True)
-                        await asyncio.sleep(self.strike_time)
-                        digital_write(self.r_led, False)
-                        await asyncio.sleep(self.colour_time + 0.5)
+                        await self.lose_sound()
+                        await asyncio.sleep(0.2)
                         return self.current_round, self.strikes, self.colour_sequence
                     
                     await asyncio.sleep(0.1)
+
+
+if __name__ == '__main__':
+    print('test')
+    async def test():
+        oled_clear()
+        round = 0
+        strikes = 0
+        colour_sequence = []
+        first_time = True
+        simon_test = SimonSays(3,2,3,4,6,7,8,9,10)
+
+        while strikes < 3: 
+            simon_test.start(initial_round=round, initial_strikes=strikes, initial_colours=colour_sequence)
+            if first_time:
+                await simon_test.increase_round() 
+                first_time = False    
+            simon_task = asyncio.create_task(simon_test.play())
+
+            while True:
+                if simon_task.done():
+                    results = await simon_task
+
+                    if results == 'WIN':
+                        print(results)
+                        return results
+                    
+                    elif results == 'Lose':
+                        print(results)
+                        return results
+                    
+                    round, strikes, colour_sequence = results
+                    break
+                await asyncio.sleep(0.1)
+
+    asyncio.run(test())
+    buzzer_stop(2)

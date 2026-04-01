@@ -12,6 +12,8 @@ class MorseCode:
 
 
     def start(self, current_strikes):
+        oled_clear()
+        self.max_time = 6
         five_letter_words = {
                                 "shell": "shark",
                                 "halls": "porch",
@@ -82,9 +84,11 @@ class MorseCode:
         while True:
             if digital_read(self.dot_pin):
                 first_input = 0
+                await self.wait_for_button_release()
                 return first_input
             elif digital_read(self.dash_pin):
                 first_input = 1
+                await self.wait_for_button_release()
                 return first_input
             await asyncio.sleep(0.05)
 
@@ -99,11 +103,13 @@ class MorseCode:
                 print("Dot")
                 digital_write(self.buzzer_pin, True)
                 await asyncio.sleep(0.1)
+                await self.wait_for_button_release()
                 digital_write(self.buzzer_pin, False)
             else:
                 print("Dash")
                 digital_write(self.buzzer_pin, True)
                 await asyncio.sleep(0.25)
+                await self.wait_for_button_release()
                 digital_write(self.buzzer_pin, False)
 
             while True:
@@ -122,6 +128,7 @@ class MorseCode:
                     digital_write(self.buzzer_pin, True)
                     await asyncio.sleep(0.1)
                     digital_write(self.buzzer_pin, False)
+                    
 
                 elif digital_read(self.dash_pin):
                     self.input_seq.append(1)
@@ -133,14 +140,40 @@ class MorseCode:
                     await asyncio.sleep(0.25)
                     digital_write(self.buzzer_pin, False)
 
-                if time() - start_time > 2:
+                if time() - start_time > self.max_time:
                     return 'strike'
 
                 await asyncio.sleep(0.1)
 
 
-    async def main(self):
-        while True:
+    async def win_sound(self, buzzer_pin):
+        notes = [523, 659, 784, 1047]   # C5 E5 G5 C6
+        for note in notes:
+            buzzer_frequency(buzzer_pin, note)
+            await asyncio.sleep(0.15)
+        buzzer_stop(buzzer_pin)
+
+
+    async def lose_sound(self, buzzer_pin):
+        notes = [784, 659, 523, 392]   # G5 E5 C5 G4
+        for note in notes:
+            buzzer_frequency(buzzer_pin, note)
+            await asyncio.sleep(0.25)
+        buzzer_stop(buzzer_pin)
+
+
+    async def wait_for_button_release(self):
+        while (
+            digital_read(self.dot_pin) or
+            digital_read(self.dash_pin)
+        ):
+            await asyncio.sleep(0.03)
+
+        await asyncio.sleep(0.08)
+  
+  
+    async def main(self):  
+        while True:  
             play_task = asyncio.create_task(self.play())
             check_for_input_task = asyncio.create_task(self.check_for_input())
 
@@ -155,15 +188,29 @@ class MorseCode:
                         check_for_input_task.cancel()
                         play_task.cancel()
                         print(message)
-                        # TODO make the buzzer play a happy sound
+                        await self.win_sound(self.buzzer_pin)
                         return message
                     
                     else:
                         print('you get a strike')
                         check_for_input_task.cancel()
                         play_task.cancel()
-                        self.current_strikes += 1
-                        # TODO make the buzzer play a sad sound
+                        await self.lose_sound(self.buzzer_pin)
                         return "LOSE"
 
                 await asyncio.sleep(0.1)
+
+if __name__ == '__main__':
+    async def test():
+        morse = MorseCode(2,3,4)
+        morse.start(0)
+
+        result = await morse.main()
+
+        if result == "WIN":
+            print("Morse solved")
+        else:
+            print("Morse failed")
+
+
+    asyncio.run(test())

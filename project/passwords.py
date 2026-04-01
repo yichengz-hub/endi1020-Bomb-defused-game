@@ -95,15 +95,13 @@ class Passwords:
 
                 while digital_read(self.submit_btn):
                     time.sleep(0.01)
-
+ 
                 return result
             
             time.sleep(0.05)
 
 
 if __name__ == '__main__':
-    digital_write(4, True)
-    digital_write(7, False)
-    game = Passwords(8,9,10)
+    game = Passwords(2,3,4)
     time.sleep(2)
     game.game_loop()

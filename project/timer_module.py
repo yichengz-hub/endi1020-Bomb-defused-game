@@ -2,12 +2,12 @@ from engi1020.arduino.api import *
 import asyncio
 import time
 
-POT_PIN = 3 
+POT_PIN = 3 # 4D13
 CLK_PIN = 3
 DIO_PIN = 2
 
 MAX_TIME = 600
-STABLE_THRESHOLD = 10
+STABLE_THRESHOLD = 15
 STABLE_TIME = 3
 
 def pot_to_time(value):
@@ -56,23 +56,20 @@ def select_time():
         time.sleep(0.1)
 
 
-async def run_timer(start_time):
-    """
-    Async countdown timer
-    """
-
+async def run_timer(start_time, game_state):
     time_left = start_time
 
     while time_left >= 0:
         display_time(time_left)
 
         if time_left == 0:
-            print("KABOOM!")
-            return
+            print("BOOM!!!!")
+            return "LOSE"
 
         await asyncio.sleep(1)
         time_left -= 1
 
+    
 if __name__ == "__main__":
     async def test():
         print("Turn the potentiometer to choose a time...")
@@ -83,6 +80,7 @@ if __name__ == "__main__":
         print(f"Starting countdown from {start_time} seconds")
 
         # Run countdown
-        await run_timer(start_time)
+        await run_timer(start_time, False)
 
     asyncio.run(test())
+    
