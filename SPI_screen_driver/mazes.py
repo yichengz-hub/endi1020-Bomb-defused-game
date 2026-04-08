@@ -153,6 +153,8 @@ class MazeGame:
 
 if __name__ == "__main__":
     driver = LCDDriver(port='/dev/tty.usbserial-0001')
+
     maze = MazeGame(driver)
     result = maze.run()
     print(f"Maze result: {result}")
+    driver.digital_write(6, 1)

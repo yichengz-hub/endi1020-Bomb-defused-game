@@ -11,60 +11,65 @@ class LCDDriver:
         self.objects = []  
         self.init_screen(width, height)
 
-    def _wait_for_ack(self):
-        """Block Python script until the Arduino replies with 'K'"""
-        while True:
-            if self.ser.in_waiting > 0:
-                response = self.ser.read()
-                if response == b'K':
-                    break
-
     def init_screen(self, w, h):
         self.ser.write(b'I')
         self.ser.write(w.to_bytes(2, 'little'))
         self.ser.write(h.to_bytes(2, 'little'))
         self._wait_for_ack()
 
-    # --- Hardware IO Methods ---
-    def digital_read(self, pin):
-        """Sends a read command and returns 0 or 1."""
-        # 1. Clear any leftover junk in the buffer before asking for a new read
-        self.ser.reset_input_buffer()
-        
-        # 2. Send Command
-        self.ser.write(b'D') 
-        self.ser.write(bytes([pin]))
-        
-        # 3. Wait for data with a timeout
+    def _wait_for_ack(self):
+        """Wait for 'K' with a strict timeout so we don't hang."""
         start_time = time.time()
+        while (time.time() - start_time) < 0.5: # 500ms limit
+            if self.ser.in_waiting > 0:
+                res = self.ser.read(1)
+                if res == b'K':
+                    return True
+        return False
+
+    def signal_win(self):
+        """Triggers the CMD_WIN ('V') case in firmware"""
+        self.ser.write(b'V')
+        return self._wait_for_ack()
+
+    def analog_read(self, pin):
+        """Read 10-bit analog value (0-1023)"""
+        if self.ser.in_waiting > 0:
+            self.ser.read(self.ser.in_waiting)
+        self.ser.write(b'a')
+        self.ser.write(bytes([pin]))
+        res = self.ser.read(2)
+        return int.from_bytes(res, 'little') if len(res) == 2 else 0
+
+    def analog_write(self, pin, value):
+        """Writes 0-1000 value (switches to Digital HIGH/LOW for Pins 16/17)"""
+        self.ser.write(b'A')
+        self.ser.write(bytes([pin]))
+        self.ser.write(value.to_bytes(2, 'little'))
+        return self._wait_for_ack()
+
+    def digital_read(self, pin):
+        if self.ser.in_waiting > 0:
+            self.ser.read(self.ser.in_waiting)
+        self.ser.write(b'D')
+        self.ser.write(bytes([pin]))
+        start = time.time()
         while self.ser.in_waiting == 0:
-            if time.time() - start_time > 1.0:
-                print(f"Error: Timeout reading pin {pin}")
-                return 0
-        
-        # 4. Read and Decode
-        raw_data = self.ser.read(1)
-        
-        # Logic: Convert bytes to string, then check if it's '1'
-        # This works whether your Arduino uses Serial.print() or Serial.write()
-        if raw_data == b'1' or raw_data == b'\x01':
-            return 1
-        else:
-            return 0
-        
+            if time.time() - start > 0.1: return 0
+        res = self.ser.read(1)
+        return int.from_bytes(res, 'big')
+
     def digital_write(self, pin, state):
-        """Sets a pin to state (0=LOW, 1=HIGH). Sets pin to OUTPUT."""
         self.ser.write(b'L')
         self.ser.write(bytes([pin, 1 if state else 0]))
-        self._wait_for_ack()
+        return self._wait_for_ack()
 
-    # --- Screen Management ---
+    # --- Screen Management & Drawing ---
     def clear(self):
         self.ser.write(b'C')
         self._wait_for_ack()
         self.objects = []
 
-    # --- Object storage (for batch updates) ---
     def draw_rect(self, x, y, w, h, color=0):
         self.objects.append(('rect', x, y, w, h, color))
 
@@ -78,16 +83,14 @@ class LCDDriver:
         self.objects.append(('wire', x, y, w, h, color))
 
     def cut_wire(self, x, y, w=200, h=10):
-        self.objects.append(('rect', x, y, w, h, 10)) # Using 10 (Black) as the eraser
+        self.objects.append(('rect', x, y, w, h, 10))
 
     def draw_text(self, x, y, text, size=1, color=0):
         self.objects.append(('text', x, y, text, size, color))
 
     def update(self):
-        """Redraw all stored objects to the screen"""
         self.ser.write(b'C')
         self._wait_for_ack()
-
         for obj in self.objects:
             if obj[0] == 'rect': self._send_rect(*obj[1:])
             elif obj[0] == 'circle': self._send_circle(*obj[1:])
@@ -97,46 +100,21 @@ class LCDDriver:
 
     # --- Private Serial Protocols ---
     def _send_rect(self, x, y, w, h, color):
-        self.ser.write(b'R')
-        self.ser.write(x.to_bytes(2,'little'))
-        self.ser.write(y.to_bytes(2,'little'))
-        self.ser.write(w.to_bytes(2,'little'))
-        self.ser.write(h.to_bytes(2,'little'))
-        self.ser.write(bytes([color]))
-        self._wait_for_ack()
+        self.ser.write(b'R'); [self.ser.write(v.to_bytes(2,'little')) for v in [x,y,w,h]]
+        self.ser.write(bytes([color])); self._wait_for_ack()
 
     def _send_circle(self, x, y, r, color):
-        self.ser.write(b'O')
-        self.ser.write(x.to_bytes(2,'little'))
-        self.ser.write(y.to_bytes(2,'little'))
-        self.ser.write(r.to_bytes(2,'little'))
-        self.ser.write(bytes([color]))
-        self._wait_for_ack()
+        self.ser.write(b'O'); [self.ser.write(v.to_bytes(2,'little')) for v in [x,y,r]]
+        self.ser.write(bytes([color])); self._wait_for_ack()
 
     def _send_triangle(self, x0, y0, x1, y1, x2, y2, color):
-        self.ser.write(b'G')
-        self.ser.write(x0.to_bytes(2,'little'))
-        self.ser.write(y0.to_bytes(2,'little'))
-        self.ser.write(x1.to_bytes(2,'little'))
-        self.ser.write(y1.to_bytes(2,'little'))
-        self.ser.write(x2.to_bytes(2,'little'))
-        self.ser.write(y2.to_bytes(2,'little'))
-        self.ser.write(bytes([color]))
-        self._wait_for_ack()
+        self.ser.write(b'G'); [self.ser.write(v.to_bytes(2,'little')) for v in [x0,y0,x1,y1,x2,y2]]
+        self.ser.write(bytes([color])); self._wait_for_ack()
 
     def _send_wire(self, x, y, w, h, color):
-        self.ser.write(b'W')
-        self.ser.write(x.to_bytes(2,'little'))
-        self.ser.write(y.to_bytes(2,'little'))
-        self.ser.write(w.to_bytes(2,'little'))
-        self.ser.write(h.to_bytes(2,'little'))
-        self.ser.write(bytes([color]))
-        self._wait_for_ack()
+        self.ser.write(b'W'); [self.ser.write(v.to_bytes(2,'little')) for v in [x,y,w,h]]
+        self.ser.write(bytes([color])); self._wait_for_ack()
 
     def _send_text(self, x, y, text, size, color):
-        self.ser.write(b'T')
-        self.ser.write(x.to_bytes(2,'little'))
-        self.ser.write(y.to_bytes(2,'little'))
-        self.ser.write(bytes([size, color, len(text)]))
-        self.ser.write(text.encode())
-        self._wait_for_ack()
+        self.ser.write(b'T'); [self.ser.write(v.to_bytes(2,'little')) for v in [x,y]]
+        self.ser.write(bytes([size, color, len(text)])); self.ser.write(text.encode()); self._wait_for_ack()

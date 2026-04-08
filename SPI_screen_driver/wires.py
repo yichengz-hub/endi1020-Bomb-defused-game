@@ -5,7 +5,7 @@ from LCDDriver import LCDDriver
 
 # --- CONFIG ---
 PORT = '/dev/tty.usbserial-0001'
-BTN_NEXT = 3  
+BTN_NEXT = 3   
 BTN_CUT = 2   
 
 # --- FIRMWARE COLOR MAPPING ---
@@ -72,45 +72,50 @@ class WiresGame:
         last_n, last_c = 0, 0
         print("Starting Loop. Polling buttons...")
         
+        # Ensure we start with a clean state
+        self.lcd.ser.reset_input_buffer()
+
         while True:
             try:
-                # We read pins manually to ensure we don't hang
-                # Read NEXT button
-                self.lcd.ser.reset_input_buffer() # Clear junk
-                self.lcd.ser.write(b'D' + bytes([BTN_NEXT]))
-                n_raw = self.lcd.ser.read(1)
-                n_val = int.from_bytes(n_raw, 'big') if n_raw else last_n
+                # 1. Read NEXT button (Pin 3)
+                # We use the driver's digital_read which handles the serial timing
+                n_val = self.lcd.digital_read(BTN_NEXT)
 
-                # Read CUT button
-                self.lcd.ser.write(b'D' + bytes([BTN_CUT]))
-                c_raw = self.lcd.ser.read(1)
-                c_val = int.from_bytes(c_raw, 'big') if c_raw else last_c
+                # 2. Read CUT button (Pin 2)
+                c_val = self.lcd.digital_read(BTN_CUT)
 
-                # Cycle through wires
+                # 3. Logic: Cycle through wires on "Press" (Transition from 0 to 1)
                 if n_val == 1 and last_n == 0:
-                    self.draw_selector(self.selected, GREY)
+                    print("Next Button Pressed")
+                    self.draw_selector(self.selected, GREY) # Erase old
                     self.selected = (self.selected + 1) % self.wire_count
-                    self.draw_selector(self.selected, WHITE)
+                    self.draw_selector(self.selected, WHITE) # Draw new
 
-                # Cut wire
+                # 4. Logic: Cut selected wire on "Press"
                 if c_val == 1 and last_c == 0:
+                    print(f"Wire Cut! Selected: {self.selected}, Correct: {self.correct}")
                     if self.selected == self.correct:
                         self.lcd._send_rect(0, 0, 240, 320, GREEN)
                         self.lcd._send_text(40, 120, "SAFE!", 3, WHITE)
-                        time.sleep(0.5)
-                        return "win" # EXIT LOOP
+                        time.sleep(1.5)
+                        return "win" 
                     else:
                         self.lcd._send_rect(0, 0, 240, 320, RED)
                         self.lcd._send_text(40, 120, "BOOM!", 4, WHITE)
-                        time.sleep(1.0)
-                        return "lose" # EXIT LOOP
+                        time.sleep(1.5)
+                        return "lose"
 
+                # 5. Update "last" states for the next loop iteration
                 last_n, last_c = n_val, c_val
-                time.sleep(0.01)
+                
+                # Small delay to prevent CPU slamming and bouncing
+                time.sleep(0.05)
                 
             except Exception as e:
                 print(f"Error in loop: {e}")
+                # Only reset buffer if an actual error occurs
                 self.lcd.ser.reset_input_buffer()
+                time.sleep(0.1)
 
 if __name__ == "__main__":
     try:

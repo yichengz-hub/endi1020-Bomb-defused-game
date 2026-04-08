@@ -1,11 +1,9 @@
 import time
 from LCDDriver import LCDDriver
 
-# ... (Your LCDDriver class here) ...
-
 def main():
     lcd = LCDDriver(port='/dev/tty.usbserial-0001')
-    RELAY_PIN = 3
+    RELAY_PIN = 16
 
     while True:
 
