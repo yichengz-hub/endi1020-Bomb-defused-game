@@ -3,7 +3,7 @@ import asyncio
 from random import choice
 from time import time
 
-class SimonSays():
+class SimonSays:
     def __init__(self, total_rounds,  buzzer_pin, r_button, y_button, b_button, g_button, r_led, g_led, b_led):
         self.total_rounds = total_rounds
         self.buzzer_pin = buzzer_pin
@@ -97,27 +97,24 @@ class SimonSays():
 
             # Check if the round needs to be increased, if it does, add a random colour to the sequence.
             if self.next_round == True:
-                index = choice(range(len(self.colours)))
-                self.colour_sequence.append(self.colours[index])
-                self.input_colour_sequence.append(self.matching_colours[index])
-                self.current_round += 1
+                await self.increase_round()
                 self.next_round = False
             
             for colour in self.colour_sequence:
                 if colour == 'red':
-                    print("red")
+                    print(colour)
                     digital_write(self.r_led, True)
                     buzzer_note(self.buzzer_pin, self.r_frequency, self.colour_time)
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.r_led, False)
                 elif colour == 'blue':
-                    print("blue")
+                    print(colour)
                     digital_write(self.b_led, True)
                     buzzer_note(self.buzzer_pin, self.b_frequency, self.colour_time)
                     await asyncio.sleep(self.colour_time)
                     digital_write(self.b_led, False)
                 elif colour == 'yellow':
-                    print("yellow")
+                    print(colour)
                     digital_write(self.r_led, True)
                     digital_write(self.g_led, True)
                     buzzer_note(self.buzzer_pin, self.y_frequency, self.colour_time)
@@ -125,7 +122,7 @@ class SimonSays():
                     digital_write(self.g_led, False)
                     digital_write(self.r_led, False)
                 else:
-                    print("green")
+                    print(colour)
                     digital_write(self.g_led, True)
                     buzzer_note(self.buzzer_pin, self.g_frequency, self.colour_time)
                     await asyncio.sleep(self.colour_time)
@@ -143,12 +140,6 @@ class SimonSays():
                 g_input = digital_read(self.g_button)
 
                 # If the user inputs a colour, we then take the future inputs and check if it is the correct sequence.
-                print(
-                    f"R={digital_read(self.r_button)} "
-                    f"Y={digital_read(self.y_button)} "
-                    f"B={digital_read(self.b_button)} "
-                    f"G={digital_read(self.g_button)}"
-)
                 if r_input == True:
                     first_input = 'red'
                     print("red inputted")
@@ -194,7 +185,7 @@ class SimonSays():
                     first_input = 'timeout'
                     break
 
-                await asyncio.sleep(0.05)
+                await asyncio.sleep(0.01)
             
 
             # The user has entered an input, start the sequence of checking the next inputs
@@ -206,7 +197,6 @@ class SimonSays():
 
                 print("\nwaiting for future inputs...")
 
-                # Prevent ghost second press from bounce
                 await asyncio.sleep(0.2)
 
                 while True:
@@ -286,7 +276,7 @@ class SimonSays():
                         await asyncio.sleep(0.2)
                         return self.current_round, self.strikes, self.colour_sequence
                     
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.01)
 
 
 if __name__ == '__main__':
