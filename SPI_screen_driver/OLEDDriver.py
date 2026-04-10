@@ -2,11 +2,11 @@ import serial
 import time
 
 class OLEDDriver:
-    """Python driver for Arduino Waveshare LCD with hardware IO support"""
+    """Python driver for Arduino Waveshare OLED with hardware IO support"""
 
     def __init__(self, port='/dev/tty.usbserial-0001', baudrate=115200, width=240, height=320):
         self.ser = serial.Serial(port, baudrate, timeout=1)
-        time.sleep(2)  # Give the Arduino time to reboot
+        time.sleep(2)
         self.ser.reset_input_buffer()
         self.objects = []  
         self.init_screen(width, height)
@@ -17,23 +17,11 @@ class OLEDDriver:
         self.ser.write(h.to_bytes(2, 'little'))
         self._wait_for_ack()
 
-    def _wait_for_ack(self):
-        """Wait for 'K' with a strict timeout so we don't hang."""
-        start_time = time.time()
-        while (time.time() - start_time) < 0.5: # 500ms limit
-            if self.ser.in_waiting > 0:
-                res = self.ser.read(1)
-                if res == b'K':
-                    return True
-        return False
-
     def signal_win(self):
-        """Triggers the CMD_WIN ('V') case in firmware"""
         self.ser.write(b'V')
         return self._wait_for_ack()
 
     def analog_read(self, pin):
-        """Read 10-bit analog value (0-1023)"""
         if self.ser.in_waiting > 0:
             self.ser.read(self.ser.in_waiting)
         self.ser.write(b'a')
@@ -42,7 +30,6 @@ class OLEDDriver:
         return int.from_bytes(res, 'little') if len(res) == 2 else 0
 
     def analog_write(self, pin, value):
-        """Writes 0-1000 value (switches to Digital HIGH/LOW for Pins 16/17)"""
         self.ser.write(b'A')
         self.ser.write(bytes([pin]))
         self.ser.write(value.to_bytes(2, 'little'))
@@ -99,6 +86,15 @@ class OLEDDriver:
             elif obj[0] == 'text': self._send_text(*obj[1:])
 
     # --- Private Serial Protocols ---
+    def _wait_for_ack(self):
+        start_time = time.time()
+        while (time.time() - start_time) < 0.5:
+            if self.ser.in_waiting > 0:
+                res = self.ser.read(1)
+                if res == b'K':
+                    return True
+        return False
+
     def _send_rect(self, x, y, w, h, color):
         self.ser.write(b'R'); [self.ser.write(v.to_bytes(2,'little')) for v in [x,y,w,h]]
         self.ser.write(bytes([color])); self._wait_for_ack()

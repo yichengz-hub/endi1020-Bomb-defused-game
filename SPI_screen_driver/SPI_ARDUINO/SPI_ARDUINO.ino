@@ -23,6 +23,8 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 #define CMD_ANALOG_WRITE 'A'  
 
 void setup() {
+  pinMode(16, INPUT); 
+  pinMode(17, INPUT);
   Serial.begin(115200);
   tft.init(240, 320, SPI_MODE3);
   tft.setRotation(0);
@@ -30,7 +32,7 @@ void setup() {
   pinMode(TFT_BL, OUTPUT);
   digitalWrite(TFT_BL, HIGH);
   delay(100);
-  Serial.write('K');
+  //Serial.write('K');
 }
 
 uint16_t getColor(uint8_t code) {
@@ -41,7 +43,7 @@ uint16_t getColor(uint8_t code) {
     case 3: return ST77XX_BLUE;
     case 4: return ST77XX_YELLOW;
     case 10: return ST77XX_BLACK;
-    case 5: return 0x7BEF;
+    case 5: return 0x7BEF; // GREY
     default: return ST77XX_WHITE;
   }
 }
@@ -133,7 +135,7 @@ void loop() {
           while (Serial.available() < 1);
           uint8_t pin = Serial.read();
           // Explicitly set pin mode before reading
-          pinMode(pin, INPUT_PULLUP);
+          pinMode(pin, INPUT);
           Serial.write(digitalRead(pin));
         }
         break;
@@ -149,44 +151,44 @@ void loop() {
         }
         break;
 
-      case CMD_WIN:
-        {
-          pinMode(16, OUTPUT);
-          digitalWrite(16, HIGH);
-          pinMode(17, INPUT);
-          pinMode(13, OUTPUT);
-          digitalWrite(13, HIGH);
-          Serial.write('K');
-        }
-        break;
+      // case CMD_WIN:
+      //   {
+      //     pinMode(16, OUTPUT);
+      //     digitalWrite(16, HIGH);
+      //     pinMode(17, INPUT);
+      //     pinMode(13, OUTPUT);
+      //     digitalWrite(13, HIGH);
+      //     Serial.write('K');
+      //   }
+      //   break;
 
-      case CMD_ANALOG_READ:
-        {
-          while (Serial.available() < 1);
-          uint8_t pin = Serial.read();
-          pinMode(pin, INPUT); // Ensure it is an input for reading
-          int val = analogRead(pin); 
-          Serial.write(lowByte(val));
-          Serial.write(highByte(val));
-        }
-        break;
+      // case CMD_ANALOG_READ:
+      //   {
+      //     while (Serial.available() < 1);
+      //     uint8_t pin = Serial.read();
+      //     pinMode(pin, INPUT); // Ensure it is an input for reading
+      //     int val = analogRead(pin); 
+      //     Serial.write(lowByte(val));
+      //     Serial.write(highByte(val));
+      //   }
+      //   break;
 
-      case CMD_ANALOG_WRITE:
-        {
-          while (Serial.available() < 3);
-          uint8_t pin = Serial.read();
-          int val = Serial.read() | (Serial.read() << 8);
+      // case CMD_ANALOG_WRITE:
+      //   {
+      //     while (Serial.available() < 3);
+      //     uint8_t pin = Serial.read();
+      //     int val = Serial.read() | (Serial.read() << 8);
           
-          pinMode(pin, OUTPUT);
-          // Check if the pin supports PWM. If not (Pins 16/17), use Digital
-          if (pin == 16 || pin == 17) {
-            digitalWrite(pin, (val >= 1000) ? HIGH : LOW);
-          } else {
-            analogWrite(pin, map(val, 0, 1000, 0, 255));
-          }
-          Serial.write('K');
-        }
-        break;
+      //     pinMode(pin, OUTPUT);
+      //     // Check if the pin supports PWM. If not (Pins 16/17), use Digital
+      //     if (pin == 16 || pin == 17) {
+      //       digitalWrite(pin, (val >= 1000) ? HIGH : LOW);
+      //     } else {
+      //       analogWrite(pin, map(val, 0, 1000, 0, 255));
+      //     }
+      //     Serial.write('K');
+      //   }
+      //   break;
     }
   }
 }

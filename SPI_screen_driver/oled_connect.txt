@@ -12,3 +12,4 @@ Since we are using the SPI.h library, these pins are fixed on the Arduino Uno/Na
 LCD Label	Arduino Pin	Function
 DIN / MOSI	11	Data Input
 CLK / SCLK	13	Serial Clock
+
