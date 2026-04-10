@@ -2,7 +2,7 @@ import asyncio
 import time
 from engi1020.arduino.api import *
 
-from timer_module import select_time, run_timer
+from timer_module import Timer
 from simon_says import SimonSays
 from passwords import Passwords
 from morse_code import MorseCode
@@ -13,6 +13,8 @@ SIMON_RELAY = 4
 PASSWORD_RELAY = 6
 MORSE_RELAY = 7
 PARTNER_SIGNAL = 16
+
+Simon_rounds = 4
 
 WIN = "WIN"
 LOSE = "LOSE"
@@ -57,28 +59,34 @@ async def initialize_relays():
 async def wait_for_partner_result():
     print("[PARTNER] Waiting for partner board result...")
 
-    while not digital_read(PARTNER_SIGNAL):
-        await asyncio.sleep(0.05)
-
-    print("[PARTNER] Pulse 1 detected")
-    await asyncio.sleep(0.3)
-
-    start = time.time()
-
-    while time.time() - start < 2:
-        if digital_read(PARTNER_SIGNAL):
-            print("[PARTNER] Pulse 2 detected -> LOSE")
-            return LOSE
-        await asyncio.sleep(0.05)
-
-    print("[PARTNER] Single pulse -> WIN")
-    return WIN
+    while True:
+        signal = digital_read(PARTNER_SIGNAL)
+        print(digital_read(PARTNER_SIGNAL))
+        if signal == True:
+            break
+        await asyncio.sleep(0.01)
+    
+    start_time = time.time()
+    while True:
+        print(digital_read(PARTNER_SIGNAL))
+        if digital_read(PARTNER_SIGNAL) == False:
+            await asyncio.sleep(0.1)
+            if digital_read(PARTNER_SIGNAL) == False:
+                end_time = time.time()
+                break
+    
+    difference = end_time - start_time
+    print(difference)
+    if difference >= 4:
+        return 'LOSE'
+    else:
+        return 'WIN'
 
 
 async def check_explosion(game_state):
     while True:
         if game_state["exploded"]:
-            print("[TIMER] 💥 BOMB EXPLODED")
+            print("[TIMER] BOMB EXPLODED")
             return LOSE
         await asyncio.sleep(0.05)
 
@@ -130,13 +138,15 @@ async def clear_password_inputs():
 # ---------------- MAIN GAME ----------------
 async def main():
     game_state = {"game_over": False, "exploded": False}
+    digital_write(16, False)
 
     print("[SYSTEM] Select time with potentiometer...")
-    start_time = select_time()
+    timer = Timer(3,3,2,5)
+    start_time = await timer.select_time()
 
     await initialize_relays()
 
-    timer_task = asyncio.create_task(run_timer(start_time, game_state))
+    timer_task = asyncio.create_task(timer.run_timer(start_time, game_state))
 
     try:
         # =====================================
@@ -145,7 +155,7 @@ async def main():
         print("\n[SYSTEM] Running Simon Says")
         await set_relay(SIMON_RELAY, False)
 
-        simon = SimonSays(0, 8, 9, 10, 11, 12, 13, 14, 15)
+        simon = SimonSays(Simon_rounds, 8, 9, 10, 11, 12, 13, 14, 15)
 
         round_num = 0
         strikes = 0
@@ -219,12 +229,12 @@ async def main():
         password_game = Passwords(8, 9, 10)
 
         password_result = await run_with_bomb_watch(
-            password_game.game_loop(),
+            password_game.main(),
             game_state
         )
 
         if password_result != WIN:
-            print("[SYSTEM] 💥 BOOM - Passwords failed")
+            print("[SYSTEM] BOOM - Passwords failed")
             await bomb_explode_melody()
             return
 
@@ -249,7 +259,7 @@ async def main():
         )
 
         if morse_result != WIN:
-            print("[SYSTEM] 💥 BOOM - Morse failed")
+            print("[SYSTEM] BOOM - Morse failed")
             await bomb_explode_melody()
             return
 
@@ -258,23 +268,23 @@ async def main():
         # =====================================
         # PARTNER BOARD
         # =====================================
-        # print("\n[SYSTEM] Starting partner board")
-        # await set_relay(MORSE_RELAY, True)
+        print("\n[SYSTEM] Starting partner board")
+        await set_relay(MORSE_RELAY, True)
 
-        # digital_write(PARTNER_SIGNAL, True)
-        # await asyncio.sleep(0.5)
-        # digital_write(PARTNER_SIGNAL, False)
+        digital_write(PARTNER_SIGNAL, True)
+        await asyncio.sleep(3)
+        digital_write(PARTNER_SIGNAL, False)
 
-        # partner_result = await run_with_bomb_watch(
-        #     wait_for_partner_result(),
-        #     game_state
-        # )
+        partner_result = await run_with_bomb_watch(
+            wait_for_partner_result(),
+            game_state
+        )
 
-        # if partner_result == LOSE:
-        #     print("[SYSTEM] BOOM - Partner failed")
-        #     return
+        if partner_result == LOSE:
+            print("[SYSTEM] BOOM - Partner failed")
+            return
 
-        print("\n🎉 CONGRATULATIONS - BOMB DEFUSED 🎉")
+        print("\n CONGRATULATIONS - BOMB DEFUSED")
 
     finally:
         print("[SYSTEM] Cleaning up timer task")

@@ -1,5 +1,5 @@
-import asyncio
 from engi1020.arduino.api import *
+import asyncio
 import morse
 from random import choice
 from time import time
@@ -84,11 +84,11 @@ class MorseCode:
         while True:
             if digital_read(self.dot_pin):
                 first_input = 0
-                await self.wait_for_button_release()
+                await self.wait_for_btn_release()
                 return first_input
             elif digital_read(self.dash_pin):
                 first_input = 1
-                await self.wait_for_button_release()
+                await self.wait_for_btn_release()
                 return first_input
             await asyncio.sleep(0.05)
 
@@ -103,13 +103,13 @@ class MorseCode:
                 print("Dot")
                 digital_write(self.buzzer_pin, True)
                 await asyncio.sleep(0.1)
-                await self.wait_for_button_release()
+                await self.wait_for_btn_release()
                 digital_write(self.buzzer_pin, False)
             else:
                 print("Dash")
                 digital_write(self.buzzer_pin, True)
                 await asyncio.sleep(0.25)
-                await self.wait_for_button_release()
+                await self.wait_for_btn_release()
                 digital_write(self.buzzer_pin, False)
 
             while True:
@@ -162,14 +162,14 @@ class MorseCode:
         buzzer_stop(buzzer_pin)
 
 
-    async def wait_for_button_release(self):
+    async def wait_for_btn_release(self):
         while (
             digital_read(self.dot_pin) or
             digital_read(self.dash_pin)
-        ):
-            await asyncio.sleep(0.03)
+            ):
+            await asyncio.sleep(0.01)
 
-        await asyncio.sleep(0.08)
+        await asyncio.sleep(0.1)
   
   
     async def main(self):  
@@ -184,12 +184,10 @@ class MorseCode:
                     result = await self.player_input(first_input)
 
                     if result == 'win':
-                        message = 'WIN'
                         check_for_input_task.cancel()
                         play_task.cancel()
-                        print(message)
                         await self.win_sound(self.buzzer_pin)
-                        return message
+                        return 'WIN'
                     
                     else:
                         print('you get a strike')
