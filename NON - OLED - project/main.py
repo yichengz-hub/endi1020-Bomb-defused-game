@@ -8,6 +8,7 @@ from passwords import Passwords
 from morse_code import MorseCode
 
 
+
 # ---------------- PIN CONFIG ----------------
 SIMON_RELAY = 4
 PASSWORD_RELAY = 6
@@ -18,6 +19,7 @@ Simon_rounds = 4
 
 WIN = "WIN"
 LOSE = "LOSE"
+
 
 
 # ---------------- HELPERS ----------------
@@ -134,7 +136,7 @@ async def clear_password_inputs():
 
 # ---------------- MAIN GAME ----------------
 async def main():
-    game_state = {"game_over": False, "exploded": False}
+    game_state = {"game_over": False, "exploded": False, "mute_timer_beep": False}
     digital_write(PARTNER_SIGNAL, False)
 
     print("[SYSTEM] Select time with potentiometer...")
@@ -204,6 +206,7 @@ async def main():
 
         print("\n[SYSTEM] Simon complete") 
         print("[SIMON] Stopping buzzer + clearing pins")
+        await asyncio.sleep(0.2)
         buzzer_stop(8)
         digital_write(8, False)
         digital_write(13, False)
@@ -250,6 +253,7 @@ async def main():
         await asyncio.sleep(0.2)
 
         morse_game = MorseCode(11, 12, 10)
+        game_state["mute_timer_beep"] = True
         morse_game.start(0)
 
         morse_result = await run_with_bomb_watch(
@@ -262,6 +266,7 @@ async def main():
             await bomb_explode_melody()
             return
 
+        game_state["mute_timer_beep"] = False
         print("[MORSE] Solved")
 
 

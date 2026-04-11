@@ -72,7 +72,8 @@ class Timer:
 
         while time_left >= 0 and not game_state["game_over"]:
             self.display_time(time_left)
-            buzzer_note(self.buzzer_pin, 1200, 0.12)
+            if not game_state.get("mute_timer_beep", False):
+                buzzer_note(self.buzzer_pin, 1200, 0.12)
 
             if time_left == 0:
                 print("[TIMER] BOOM - time ran out")
@@ -92,7 +93,7 @@ if __name__ == "__main__":
         timer = Timer(3,3,2,5)
         
         start_time =  await timer.select_time()
-        game_state = {"game_over": False, "exploded": False}
+        game_state = {"game_over": False, "exploded": False, "mute_timer_beep": False}
 
         print(f"Starting countdown from {start_time} seconds")
 
