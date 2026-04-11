@@ -204,6 +204,7 @@ async def main():
 
         print("\n[SYSTEM] Simon complete") 
         print("[SIMON] Stopping buzzer + clearing pins")
+        buzzer_stop(8)
         digital_write(8, False)
         digital_write(13, False)
         digital_write(14, False)
